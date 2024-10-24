@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Solver</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2em;
+            margin-top: 20px;
+            color: #e0e0e0;
+            font-weight: bold;
+        }
+
+        canvas {
+            border: 2px solid #00bcd4;
+            border-radius: 12px;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0px 8px 15px rgba(0, 188, 212, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        #status, #timer {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.2em;
+            color: #b0bec5;
+            transition: color 0.3s ease;
+        }
+
+        #status {
+            animation: fadeInStatus 1.5s ease-in-out;
+        }
+
+        #timer {
+            animation: fadeInTimer 1.5s ease-in-out 0.5s;
+        }
+
+        @keyframes fadeInStatus {
+            0% {
+                opacity: 0;
+                color: #546e7a;
+            }
+            100% {
+                opacity: 1;
+                color: #b0bec5;
+            }
+        }
+
+        @keyframes fadeInTimer {
+            0% {
+                opacity: 0;
+                color: #546e7a;
+            }
+            100% {
+                opacity: 1;
+                color: #b0bec5;
+            }
+        }
+
+        button {
+            background-color: #00bcd4;
+            color: #ffffff;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #008ba3;
+            box-shadow: 0px 6px 12px rgba(0, 188, 212, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Maze Solver</h1>
+    <canvas id="mazeCanvas"></canvas>
+    <div id="status">Click to set entrance(1) and exit(2) points.</div>
+    <div id="timer"></div>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const maze = {{ maze | tojson }};
+        const mazeImagePath = "{{ url_for('uploaded_file', filename=filename) }}";
+        let image = new Image();
+        let startPoint = null;
+        let endPoint = null;
+        let isFinalPathShown = false;
+        let startTime;
+
+        // Convert pixel coordinates to maze array indices
+        function pixelToMazeCoords(x, y) {
+            const row = Math.floor(y * (maze.length / canvas.height));
+            const col = Math.floor(x * (maze[0].length / canvas.width));
+            return [row, col];
+        }
+
+        // Convert maze array indices to pixel coordinates
+        function mazeToPixelCoords(row, col) {
+            const x = (col + 0.5) * (canvas.width / maze[0].length);
+            const y = (row + 0.5) * (canvas.height / maze.length);
+            return [x, y];
+        }
+
+        function resizeCanvas(width, height) {
+            // Set canvas size to match maze dimensions while keeping it reasonable for display
+            const maxWidth = window.innerWidth * 0.8;
+            const maxHeight = window.innerHeight * 0.8;
+            const scale = Math.min(maxWidth / width, maxHeight / height);
+            
+            canvas.width = width * scale;
+            canvas.height = height * scale;
+            return scale;
+        }
+
+        function loadMazeImage(imgPath) {
+            image.src = imgPath;
+            image.onload = function() {
+                const scale = resizeCanvas(image.width, image.height);
+                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+                console.log("Maze loaded. Dimensions:", maze.length, "x", maze[0].length);
+            };
+        }
+
+        function drawSquare(x, y, color = 'green', sizeFactor = 0.3) {
+            const size = Math.max(3, (canvas.width / maze[0].length) * sizeFactor); // Minimum size to prevent invisibility
+            ctx.fillStyle = color;
+            ctx.fillRect(x - size / 2, y - size / 2, size, size);
+        }
+
+        canvas.addEventListener('click', (event) => {
+            if (isFinalPathShown) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            const [row, col] = pixelToMazeCoords(x, y);
+
+            // Check if clicked position is valid (path, not wall)
+            if (maze[row][col] !== 0) {
+                document.getElementById('status').innerText = "Please click on a valid path (white space)";
+                return;
+            }
+
+            if (!startPoint) {
+                startPoint = [row, col];
+                const [pixelX, pixelY] = mazeToPixelCoords(row, col);
+                drawSquare(pixelX, pixelY, 'green');
+                document.getElementById('status').innerText = "Start point set. Now click to set end point.";
+                console.log("Start point set at maze coordinates:", startPoint);
+            } else if (!endPoint) {
+                endPoint = [row, col];
+                const [pixelX, pixelY] = mazeToPixelCoords(row, col);
+                drawSquare(pixelX, pixelY, 'red');
+                document.getElementById('status').innerText = "End point set. Starting solver...";
+                console.log("End point set at maze coordinates:", endPoint);
+                startSolver();
+            }
+        });
+
+        function drawLine(start, end, color = 'blue', thicknessFactor = 0.05) {
+            const thickness = Math.max(1, (canvas.width / maze[0].length) * thicknessFactor); // Ensure visibility
+            const [startX, startY] = mazeToPixelCoords(start[0], start[1]);
+            const [endX, endY] = mazeToPixelCoords(end[0], end[1]);
+            
+            ctx.strokeStyle = color;
+            ctx.lineWidth = thickness;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
+
+        function startSolver() {
+            console.log("Starting solver with maze dimensions:", maze.length, "x", maze[0].length);
+            console.log("Start point:", startPoint, "End point:", endPoint);
+
+            const socket = io.connect(window.location.origin);  // Automatically use the same origin and port
+            startTime = Date.now();  // Start the timer
+
+            socket.on('connect', () => {
+                console.log("WebSocket connected");
+                socket.emit('start_bfs', {
+                    maze: maze,
+                    start: startPoint,
+                    end: endPoint
+                });
+            });
+
+            socket.on('explore_path', (data) => {
+                console.log("Exploring:", data);
+                drawLine(data.start, data.end, 'rgba(0, 0, 255, 1)', 3);  // Thinner line for larger mazes
+            });
+
+            socket.on('final_path', (path) => {
+                console.log("Final path received:", path);
+                isFinalPathShown = true;
+                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                // Redraw start and end points
+                const [startX, startY] = mazeToPixelCoords(startPoint[0], startPoint[1]);
+                const [endX, endY] = mazeToPixelCoords(endPoint[0], endPoint[1]);
+                drawSquare(startX, startY, 'green');
+                drawSquare(endX, endY, 'red');
+
+                // Draw final path
+                path.forEach((point, index) => {
+                    if (index > 0) {
+                        drawLine(path[index - 1], point, 'green', 3);  // Thinner gold line for final path
+                    }
+                });
+
+                // Stop timer and display time taken
+                const endTime = Date.now();
+                const timeTaken = (endTime - startTime) / 1000;  // Convert to seconds
+                document.getElementById('timer').innerText = `Solved in ${timeTaken.toFixed(2)} seconds`;
+                document.getElementById('status').innerText = "Path found!";
+            });
+
+            socket.on('no_path', () => {
+                document.getElementById('status').innerText = "No path found!";
+                console.log("No path found between points");
+            });
+
+            socket.on('error', (data) => {
+                console.error("Solver error:", data.message);
+                document.getElementById('status').innerText = "Error: " + data.message;
+            });
+        }
+
+        window.onload = function() {
+            loadMazeImage(mazeImagePath);
+        };
+    </script>
+</body>
+</html>
