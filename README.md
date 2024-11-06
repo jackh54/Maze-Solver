@@ -79,9 +79,9 @@ This project is an interactive web-based application that allows users to upload
 4. **View the Solution**: If the path is found, it will be displayed in gold. The processing time will be displayed below the maze.
 
 ## Limitations (to be fixed)
-[ ] Fix path finding going around the maze on certain mazes
-[ ] Fix the maze resoulution
-[ ] Add a cropping feature
+- [ ] Fix path finding going around the maze on certain mazes
+- [ ] Fix the maze resolution
+- [ ] Add a cropping feature
 
 ## File Structure
 
