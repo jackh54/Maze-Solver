@@ -11,6 +11,7 @@ This project is an interactive web-based application that allows users to upload
 - **Processing Time**: Displays the time taken to solve the maze.
 
 ## Demo
+*(soon)*
 
 ![Maze Solver Demo](demo.gif)
 
@@ -76,6 +77,11 @@ This project is an interactive web-based application that allows users to upload
 2. **Click to Set Start and End Points**: Click on valid points (white areas) in the maze to set the start and end points.
 3. **Watch the Solver**: The A* algorithm will start solving the maze, and you can see the progress in real-time.
 4. **View the Solution**: If the path is found, it will be displayed in gold. The processing time will be displayed below the maze.
+
+## Limitations (to be fixed)
+[ ] Fix path finding going around the maze on certain mazes
+[ ] Fix the maze resoulution
+[ ] Add a cropping feature
 
 ## File Structure
 
