@@ -27,8 +27,8 @@ jobs:
 
       - name: Start Flask App
         run: |
-          cd /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver
-          nohup python app.py &
+          nohup python app.py > flask.log 2>&1 &
+
 
       - name: Output Deployment URL
         run: |
