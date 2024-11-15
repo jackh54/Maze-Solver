@@ -15,11 +15,6 @@ jobs:
         with:
           path: /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.12'
-
       - name: Update system code
         run: |
           sudo systemctl stop flaskapp.service
