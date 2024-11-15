@@ -3,7 +3,7 @@ name: Auto-Deploy Flask App
 on:
   push:
     branches:
-      - main  # Run on pushes to the main branch
+      - main
 
 jobs:
   deploy:
@@ -20,17 +20,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies
+      - name: Update system code
         run: |
-          cd /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver
-          pip install -r requirements.txt
+          sudo systemctl stop flaskapp.service
+          sudo rsync -av --delete /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver/ /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver/
+          sudo chown -R githubrunner:githubrunner /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver/
+          sudo systemctl start flaskapp.service
 
-      - name: Start Flask App
+      - name: Verify service is running
         run: |
-          nohup python app.py > flask.log 2>&1 &
-
-
-      - name: Output Deployment URL
-        run: |
-          cd /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver
-          echo "App deployed" | tee url.txt
+          sudo systemctl status flaskapp.service
