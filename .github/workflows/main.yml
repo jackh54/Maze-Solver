@@ -24,6 +24,7 @@ jobs:
           sudo rsync -av --delete /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver/ /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver/
           sudo chown -R githubrunner:githubrunner /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver/
           sudo systemctl start flaskapp.service
+          sudo systemctl restart flaskapp
 
       - name: Verify service is running
         run: |
