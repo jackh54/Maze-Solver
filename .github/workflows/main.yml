@@ -18,7 +18,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.x'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
@@ -33,4 +33,4 @@ jobs:
       - name: Output Deployment URL
         run: |
           cd /home/githubrunner/actions-runner/_work/Maze-Solver/Maze-Solver
-          echo "App deployed at http://your-server-ip:5000" | tee url.txt
+          echo "App deployed" | tee url.txt
