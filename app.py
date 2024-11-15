@@ -1,3 +1,6 @@
+import eventlet
+
+eventlet.monkey_patch()
 import os
 import cv2
 import numpy as np
@@ -5,9 +8,7 @@ import logging
 from flask import Flask, request, render_template, redirect, url_for, send_from_directory
 from flask_socketio import SocketIO, emit
 import heapq
-import eventlet
 
-eventlet.monkey_patch()
 
 # Initialize Flask app
 app = Flask(__name__)
